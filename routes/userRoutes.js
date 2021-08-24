@@ -1,7 +1,7 @@
 const express = require('express');
 
 const router = express.Router();
-const User = require('../mongodb/models/user');
+const User = require('../models/user');
 
 router.post('/', (req, res, next) => {
   const user = new User({
