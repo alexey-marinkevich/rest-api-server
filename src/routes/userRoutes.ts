@@ -4,49 +4,49 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
-const User = require('../models/User');
-const checkAuth = require('../middleware/checkAuth');
+const User = require('../models/User.ts');
+const checkAuth = require('../middleware/checkAuth.ts');
 
 const jwtKey = process.env.JWT_KEY;
 
 router.post(
   '/registration',
   body('email').isEmail(),
-  body('password').isLength({min: 6}),
+  body('password').isLength({ min: 6 }),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req)
-    
-      //validate input fields
-      if(!errors.isEmpty()) {
+      const errors = validationResult(req);
+
+      // validate input fields
+      if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
-      
-      //check if user already exists in our DB
-      const isUserExists = await User.findOne({email: req.body.email});
-      if(isUserExists) {
+
+      // check if user already exists in our DB
+      const isUserExists = await User.findOne({ email: req.body.email });
+      if (isUserExists) {
         return res.json({
-          "errors": [
+          errors: [
             {
-              "msg": "User with this email already exists",
-            }
-          ]
+              msg: 'User with this email already exists',
+            },
+          ],
         });
-      };
-      
+      }
+
       // crypt user password
       const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
       // create new user
       const user = new User({
-        email: req.body.email,   // todo: Change this on create() and check how it works
+        email: req.body.email, // todo: Change this on create() and check how it works
         password: hashedPassword,
-      }); 
+      });
 
       // save user in DB
       const savedUser = await user.save();
 
-      // create jwt token 
+      // create jwt token
       const token = jwt.sign(
         { id: savedUser._id },
         jwtKey,
@@ -54,140 +54,141 @@ router.post(
       );
 
       // set token inside header
-      res.set('x-auth-token', token)
+      res.set('x-auth-token', token);
 
       return res.end();
     } catch (err) {
       console.log(err);
-    }   
-});
+    }
+  },
+);
 
 router.post(
-  '/login', 
+  '/login',
   body('email').isEmail(),
-  body('password').isLength({min: 6}),
+  body('password').isLength({ min: 6 }),
   async (req, res) => {
     try {
       const errors = validationResult(req);
-      const {email, password} = req.body;
+      const { email, password } = req.body;
 
       // validate inputs
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
-    
+
       // if user existed
       const user = await User.findOne({ email });
 
-      if(!user) {
+      if (!user) {
         return res.json({
-          "errors": [
+          errors: [
             {
-              "msg": "Provided data is incorrect. Please try again",
-            }
-          ]
+              msg: 'Provided data is incorrect. Please try again',
+            },
+          ],
         });
-      };
+      }
 
       // compare passwords
       const isPasswordMatched = await bcrypt.compare(password, user.password);
 
-      if(!isPasswordMatched) {
+      if (!isPasswordMatched) {
         return res.json({
-          "errors": [
+          errors: [
             {
-              "msg": "Provided data is incorrect. Please try again",
-            }
-          ]
+              msg: 'Provided data is incorrect. Please try again',
+            },
+          ],
         });
-      };
+      }
 
       // create token & send it back to user
       const token = jwt.sign(
         { id: user._id },
         jwtKey,
-        { expiresIn: '1h' }
+        { expiresIn: '1h' },
       );
       // set token inside header
-      res.set('x-auth-token', token)
+      res.set('x-auth-token', token);
 
       return res.end();
     } catch (err) {
-      console.log(err)
+      console.log(err);
     }
-});
+  },
+);
 
 router.get('/logout', (req, res) => {
   try {
     const userToken = req.header('x-auth-token');
-    if(!userToken) {
+    if (!userToken) {
       res.json({
-        "errors": [
+        errors: [
           {
-            "msg": "Something went wrong",
-          }
-        ]
+            msg: 'Something went wrong',
+          },
+        ],
       });
-    };
+    }
 
-    // verify user token 
+    // verify user token
     jwt.verify(userToken, jwtKey, (err, decoded) => {
-      if(err) {
+      if (err) {
         res.json({
-          "errors": [
+          errors: [
             {
-              "msg": err.message,
-            }
-          ]
+              msg: err.message,
+            },
+          ],
         });
       }
       return decoded;
     });
 
     // create new token with minimal expiration time
-    const newToken = jwt.sign({}, jwtKey, {expiresIn: '1ms'});
-    //set it in header
+    const newToken = jwt.sign({}, jwtKey, { expiresIn: '1ms' });
+    // set it in header
     res.set('x-auth-token', newToken);
     return res.end();
   } catch (err) {
-    console.log(err)
-  };
-  
-})
+    console.log(err);
+  }
+});
 
 router.get('/all', checkAuth, (req, res, next) => {
   User.find()
     .then((result) => {
       res.send(result);
     })
-    .catch(next)
-})
+    .catch(next);
+});
 
 router.get('/:id', (req, res, next) => {
-  User.findOne({_id: req.params.id})
+  User.findOne({ _id: req.params.id })
     .then((result) => {
-      res.send(result)
+      res.send(result);
     })
     .catch(next);
-})
+});
 
 router.delete('/:id', (req, res, next) => {
-  User.findOneAndDelete({_id: req.params.id})
+  User.findOneAndDelete({ _id: req.params.id })
     .then((result) => {
-      res.send(result)
+      res.send(result);
     })
-    .catch(next)
-})
+    .catch(next);
+});
 
 router.put('/:id', (req, res, next) => {
-  console.log(req.body)
-  User.findOneAndUpdate({_id: req.params.id}, req.body, {
+  console.log(req.body);
+  User.findOneAndUpdate({ _id: req.params.id }, req.body, {
     new: true,
   })
     .then((result) => {
-      res.send(result)
+      res.send(result);
     })
-    .catch((err) => console.log(err))
-})
+    .catch((err) => console.log(err));
+});
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 
 const userSchema = new Schema({
   email: {
@@ -26,12 +26,11 @@ const userSchema = new Schema({
   confirmed: {
     type: Boolean,
     default: false,
-  }
+  },
 }, {
   timestamps: true,
-})
+});
 
-const User = mongoose.model('User', userSchema); //model name is singular from our users collection
+const User = mongoose.model('User', userSchema); // model name is singular from our users collection
 
 module.exports = User;
-
