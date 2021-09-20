@@ -5,8 +5,9 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 const User = require('../models/User');
+const checkAuth = require('../middleware/checkAuth');
 
-const jwtKey = process.env.TOKEN_SECRET_KEY;
+const jwtKey = process.env.JWT_KEY;
 
 router.post(
   '/registration',
@@ -43,18 +44,18 @@ router.post(
       }); 
 
       // save user in DB
-      const saveUser = await user.save();
+      const savedUser = await user.save();
 
       // create jwt token 
       const token = jwt.sign(
-        { id: saveUser._id },
+        { id: savedUser._id },
         jwtKey,
         { expiresIn: '1h' },
       );
 
       // set token inside header
       res.set('x-auth-token', token)
-      
+
       return res.end();
     } catch (err) {
       console.log(err);
@@ -116,9 +117,45 @@ router.post(
     }
 });
 
-// todo: Create logout function
+router.get('/logout', (req, res) => {
+  try {
+    const userToken = req.header('x-auth-token');
+    if(!userToken) {
+      res.json({
+        "errors": [
+          {
+            "msg": "Something went wrong",
+          }
+        ]
+      });
+    };
 
-router.get('/all', (req, res, next) => {
+    // verify user token 
+    jwt.verify(userToken, jwtKey, (err, decoded) => {
+      if(err) {
+        res.json({
+          "errors": [
+            {
+              "msg": err.message,
+            }
+          ]
+        });
+      }
+      return decoded;
+    });
+
+    // create new token with minimal expiration time
+    const newToken = jwt.sign({}, jwtKey, {expiresIn: '1ms'});
+    //set it in header
+    res.set('x-auth-token', newToken);
+    return res.end();
+  } catch (err) {
+    console.log(err)
+  };
+  
+})
+
+router.get('/all', checkAuth, (req, res, next) => {
   User.find()
     .then((result) => {
       res.send(result);
